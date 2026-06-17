@@ -211,6 +211,9 @@ export default function App() {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
 
+  // Mobile nav
+  const [isNavOpen, setIsNavOpen] = useState(false);
+
   // Modals
   const [activeOutlet, setActiveOutlet] = useState(null);
   
@@ -246,6 +249,11 @@ export default function App() {
     if (!currentFlavourObj || !currentSizeObj || !currentFulfillmentObj) return 0;
     return (currentFlavourObj.basePrice * currentSizeObj.multiplier) + currentFulfillmentObj.price;
   }, [currentFlavourObj, currentSizeObj, currentFulfillmentObj]);
+
+  const cakeTheme  = useMemo(() => CAKE_THEMES[cakeConfig.flavour]  || CAKE_THEMES["Chocolate Truffle"], [cakeConfig.flavour]);
+  const cakeScale  = useMemo(() => SIZE_SCALES[cakeConfig.size]      || 1.0,                              [cakeConfig.size]);
+  const cakeDecor  = useMemo(() => OCCASION_DECOR[cakeConfig.occasion] || OCCASION_DECOR["Custom Message"], [cakeConfig.occasion]);
+  const isDelivery = useMemo(() => cakeConfig.fulfillment.startsWith("Deliver") || cakeConfig.fulfillment.startsWith("Pan"), [cakeConfig.fulfillment]);
 
   // Product Catalog Filtering
   const filteredProducts = useMemo(() => {
@@ -370,7 +378,7 @@ export default function App() {
 
       {/* Navbar */}
       <nav>
-        <div className="logo-box" onClick={() => window.scrollTo(0,0)}>
+        <div className="logo-box" onClick={() => { window.scrollTo(0,0); setIsNavOpen(false); }}>
           <span className="lbox-script">Elloras<sup>®</sup></span>
           <span className="lbox-brand">Melting Moments</span>
           <span className="lbox-since">Since 1953</span>
@@ -382,10 +390,33 @@ export default function App() {
           <a href="#builder">Cake Builder</a>
           <a href="#contact">Contact</a>
         </div>
-        <button className="nav-cart" onClick={() => setIsCartOpen(true)}>
-          🛒 Cart ({cartCount})
-        </button>
+        <div className="nav-right">
+          <button className="nav-cart" onClick={() => { setIsCartOpen(true); setIsNavOpen(false); }}>
+            🛒 Cart ({cartCount})
+          </button>
+          <button
+            className={`nav-hamburger ${isNavOpen ? 'open' : ''}`}
+            onClick={() => setIsNavOpen(prev => !prev)}
+            aria-label="Toggle menu"
+          >
+            <span></span><span></span><span></span>
+          </button>
+        </div>
       </nav>
+
+      {/* Mobile Nav Drawer */}
+      {isNavOpen && (
+        <div className="mobile-nav">
+          <a href="#story"    onClick={() => setIsNavOpen(false)}>Our Story</a>
+          <a href="#outlets"  onClick={() => setIsNavOpen(false)}>Outlets</a>
+          <a href="#products" onClick={() => setIsNavOpen(false)}>Products</a>
+          <a href="#builder"  onClick={() => setIsNavOpen(false)}>Cake Builder</a>
+          <a href="#contact"  onClick={() => setIsNavOpen(false)}>Contact</a>
+          <button className="mobile-nav-cart" onClick={() => { setIsCartOpen(true); setIsNavOpen(false); }}>
+            🛒 Cart ({cartCount})
+          </button>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="hero">
@@ -695,19 +726,55 @@ export default function App() {
           {/* Live circular Cake visualizer and Summary */}
           <div className="cake-preview-panel">
             <h3 style={{ fontSize: '18px', color: 'var(--gold)', marginBottom: '5px' }}>Live Cake Preview</h3>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Interactive 3D-styled model</p>
-            
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Updates as you configure</p>
+
+            {/* Flavour label */}
+            <div className="preview-flavour-tag">
+              {cakeTheme.emoji} {cakeConfig.flavour}
+            </div>
+
             {/* Styled Circular Cake */}
             <div className="cake-visualization">
-              <div className="cake-visual-model">
-                <div className="cake-circle">
-                  <div className="cake-cream-swirls"></div>
+              <div
+                className="cake-visual-model"
+                style={{ transform: `scale(${cakeScale})`, transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)' }}
+              >
+                {/* Candles for Birthday */}
+                {cakeDecor.candles && (
+                  <div className="cake-candles">
+                    {[0,1,2].map(i => (
+                      <div key={i} className="candle">
+                        <div className="candle-body"></div>
+                        <div className="candle-flame"></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div
+                  className="cake-circle"
+                  style={{
+                    background: cakeTheme.gradient,
+                    borderColor: cakeTheme.border,
+                    boxShadow: `0 15px 40px rgba(0,0,0,0.6), 0 0 35px ${cakeTheme.glow}`
+                  }}
+                >
+                  <div className="cake-cream-swirls" style={{ borderColor: cakeTheme.swirl }}></div>
                   <div className="cake-message-preview">
                     {cakeConfig.customMessage || cakeConfig.occasion}
                   </div>
                 </div>
-                <div className="cake-side-rim"></div>
+                <div className="cake-side-rim" style={{ background: cakeTheme.rim }}></div>
               </div>
+            </div>
+
+            {/* Live badges row */}
+            <div className="preview-badges">
+              <span className="preview-badge">⚖️ {cakeConfig.size}</span>
+              <span className="preview-badge">{cakeDecor.topEmoji} {cakeConfig.occasion}</span>
+              <span className={`preview-badge ${isDelivery ? 'badge-delivery' : 'badge-pickup'}`}>
+                {isDelivery ? '🚚' : '🏪'} {cakeConfig.fulfillment.replace('Pick up — ', '')}
+              </span>
             </div>
 
             {/* Order Configuration Summary */}
